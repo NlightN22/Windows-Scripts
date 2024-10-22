@@ -7,6 +7,11 @@ function Get-UserStatus {
 
     # Use net user /domain to check if the user account is disabled
     $userInfo = net user $SamAccountName /domain
+
+    # Output the result of the net user command for debugging
+    Write-Output "net user output for ${SamAccountName}:"
+    Write-Output $userInfo
+
     $isDisabled = $userInfo -match "Учетная запись активна\s+No"
 
     # Get the user's last logon date from AD
