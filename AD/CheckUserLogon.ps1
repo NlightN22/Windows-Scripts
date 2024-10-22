@@ -1,15 +1,36 @@
-param (
-    [int]$days
-)
+# Get-UsersLastLogon.ps1
 
-# Get the current date
-$currentDate = Get-Date
+# Get all Domain Controllers
+$domainControllers = Get-ADDomainController -Filter *
 
-# Find all users in the domain
-$users = Get-ADUser -Filter * -Property LastLogonTimestamp | Where-Object {
-    # Users who never logged on (LastLogonTimestamp is null) or who haven't logged on in the last 'days' days
-    ($_).LastLogonTimestamp -eq $null -or ($currentDate - [DateTime]::FromFileTime($_.LastLogonTimestamp)).Days -gt $days
+# Function to retrieve LastLogon from all Domain Controllers
+function Get-LastLogon {
+    param (
+        [string]$user
+    )
+
+    $lastLogon = $null
+
+    foreach ($dc in $domainControllers) {
+        $dcLogon = (Get-ADUser $user -Server $dc.HostName -Property LastLogon).LastLogon
+
+        if ($dcLogon -and ($null -eq $lastLogon -or $dcLogon -gt $lastLogon)) {
+            $lastLogon = $dcLogon
+        }
+    }
+
+    return $lastLogon
 }
 
-# Output the list of inactive users
-$users | Select-Object Name, @{Name="LastLogonDate";Expression={[DateTime]::FromFileTime($_.LastLogonTimestamp)}} | Format-Table -AutoSize
+# Get all users in the domain
+$users = Get-ADUser -Filter * -Property LastLogon
+
+# Iterate over each user and output their last logon date
+$users | ForEach-Object {
+    $lastLogon = Get-LastLogon -user $_.SamAccountName
+
+    [PSCustomObject]@{
+        Name = $_.Name
+        LastLogonDate = if ($lastLogon) { [DateTime]::FromFileTime($lastLogon) } else { "Never" }
+    }
+} | Format-Table -AutoSize
