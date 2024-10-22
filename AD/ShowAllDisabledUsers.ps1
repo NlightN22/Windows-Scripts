@@ -1,41 +1,55 @@
+param(
+    [int]$days
+)
+
 Import-Module ActiveDirectory
 
-function Get-UserStatus {
-    param (
-        [string]$SamAccountName
-    )
+# Get first 20 users from the domain (storing full user objects)
+$allUsers = Get-ADUser -Filter * | Select-Object -ExpandProperty SamAccountName
 
-    # Use net user /domain to check if the user account is disabled
-    $userInfo = net user $SamAccountName /domain
-
-    # Output the result of the net user command for debugging
-    Write-Output "net user output for ${SamAccountName}:"
-    Write-Output $userInfo
-
-    $isDisabled = $userInfo -match "Учетная запись активна\s+No"
-
-    # Get the user's last logon date from AD
-    $adUser = Get-ADUser -Identity $SamAccountName -Properties LastLogonDate
-
-    return [PSCustomObject]@{
-        SamAccountName = $SamAccountName
-        IsDisabled = $isDisabled
-        LastLogonDate = $adUser.LastLogonDate
-    }
+# Set threshold based on days parameter if provided
+if ($days) {
+    $thresholdDate = (Get-Date).AddDays(-$days)
 }
-
-# Get all users from the domain
-$allUsers = Get-ADUser -Filter * | Select-Object SamAccountName
-
-# Set threshold for 30 days
-$thresholdDate = (Get-Date).AddDays(-30)
 
 # Check the status and last logon of each user
 foreach ($user in $allUsers) {
-    $userStatus = Get-UserStatus -SamAccountName $user.SamAccountName
+    try {
+        # Fetch the user's last logon date from AD
+        $adUser = Get-ADUser -Identity $user -Properties LastLogonDate
 
-    if ($userStatus.IsDisabled -and ($userStatus.LastLogonDate -eq $null -or $userStatus.LastLogonDate -lt $thresholdDate)) {
-        $lastLogonDisplay = if ($userStatus.LastLogonDate) { $userStatus.LastLogonDate } else { "Never logged in" }
-        Write-Output "User $($userStatus.SamAccountName) is disabled and last logged on: $lastLogonDisplay"
+        if ($adUser -eq $null) {
+            continue
+        }
+
+        $lastLogonDate = $adUser.LastLogonDate
+
+        # Use 'net user /domain' to check if the account is disabled
+        $userInfo = net user $user /domain | Out-String
+
+        # Split the output into lines
+        $lines = $userInfo -split "`n"
+
+        # Check the sixth line
+        if ($lines.Length -ge 6) {
+            $statusLine = $lines[5].Trim()
+
+            # Check for "No" in the sixth line
+            if ($statusLine -match "No") {
+                # If the $days parameter is provided, filter by date
+                if ($days) {
+                    if ($lastLogonDate -eq $null -or $lastLogonDate -lt $thresholdDate) {
+                        $lastLogonDisplay = if ($lastLogonDate) { $lastLogonDate } else { "Never logged in" }
+                        Write-Output "User $($user) is disabled and last logged on: $lastLogonDisplay"
+                    }
+                } else {
+                    # If $days is not provided, display all disabled users
+                    $lastLogonDisplay = if ($lastLogonDate) { $lastLogonDate } else { "Never logged in" }
+                    Write-Output "User $($user) is disabled and last logged on: $lastLogonDisplay"
+                }
+            }
+        }
+    } catch {
+        Write-Output "Error processing user $($user): $_"
     }
 }
