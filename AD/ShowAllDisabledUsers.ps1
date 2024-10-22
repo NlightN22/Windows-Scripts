@@ -4,7 +4,14 @@ param(
 
 Import-Module ActiveDirectory
 
-# Get first 20 users from the domain (storing full user objects)
+# Check permissions for 'net user' by testing it on the current user
+try {
+    $testUserInfo = net user $env:USERNAME /domain | Out-String
+} catch {
+    Write-Output "Error: Access denied when running 'net user'. Please ensure you have the necessary permissions."
+    exit
+}
+
 $allUsers = Get-ADUser -Filter * | Select-Object -ExpandProperty SamAccountName
 
 # Set threshold based on days parameter if provided
@@ -26,7 +33,11 @@ foreach ($user in $allUsers) {
 
         # Use 'net user /domain' to check if the account is disabled
         $userInfo = net user $user /domain | Out-String
-
+		
+        if ($LASTEXITCODE -ne 0) {
+            Write-Output "Error: Unable to process user $($user) due to insufficient permissions or other error."
+            exit 1
+        }
         # Split the output into lines
         $lines = $userInfo -split "`n"
 
