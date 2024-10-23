@@ -1,5 +1,3 @@
-# Get-UserLastLogon.ps1
-
 param (
     [int]$days = 0  # The 'days' parameter is optional; default is 0, meaning all users are displayed
 )
