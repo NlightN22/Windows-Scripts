@@ -38,7 +38,7 @@ if ($psVersion -lt 3) {
         exit 1
     }
 
-    $jsonContent = Get-Content -Path $configFilePath -Raw
+    $jsonContent = Get-Content -Path $configFilePath | Out-String
     $config = Parse-Json -JsonString $jsonContent
 } else {
     Log-Message "PowerShell version is 3 or higher. Using built-in JSON parsing."
