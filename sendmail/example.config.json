@@ -1,0 +1,13 @@
+{
+    "SMTPServer": "your-server.com",
+    "SMTPPort": 25,
+    "From": "username@your-server.com",
+    "To": "test@your-server.com",
+    "Subject": "Test mail",
+    "Body": "Test mail",
+    "Username": "username@your-server.com",
+    "Password": "testpass",
+    "UseCredentials": false,
+    "AttachmentFileName": "test-attachment.xls"
+  }
+  

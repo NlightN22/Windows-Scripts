@@ -1,15 +1,3 @@
-# Define parameters
-$smtpServer = "your-server.com" # Specify the SMTP server address
-$smtpPort = 25                      # Specify the SMTP port (usually 25 or 587)
-$from = "username@your-server.com"   # Sender's email address
-$to = "test@your-server.com"         # Recipient's email address
-$subjectRaw = "Test mail"          # Raw subject text
-$bodyRaw = "Test mail"             # Raw body text
-$username = "username@your-server.com"
-$password = "testpass"
-$useCredentials = $false            # Set to $true to enable credentials, $false to disable
-$attachmentFileName = "test-attachment.xls" # Relative file name for attachment
-
 # Function to log messages with timestamp
 function Log-Message {
     param (
@@ -20,8 +8,30 @@ function Log-Message {
 }
 
 # Executable part
-# Determine the script directory and construct the full path for the attachment
+# Load configuration from JSON file
 $scriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+$configFilePath = Join-Path -Path $scriptDirectory -ChildPath "config.json"
+
+if (-not (Test-Path $configFilePath)) {
+    Log-Message "Configuration file not found at path: $configFilePath. Script will terminate."
+    exit 1
+}
+
+$config = Get-Content -Path $configFilePath | ConvertFrom-Json
+
+# Assign parameters from the JSON file
+$smtpServer = $config.SMTPServer
+$smtpPort = [int]$config.SMTPPort
+$from = $config.From
+$to = $config.To
+$subjectRaw = $config.Subject
+$bodyRaw = $config.Body
+$username = $config.Username
+$password = $config.Password
+$useCredentials = [bool]$config.UseCredentials
+$attachmentFileName = $config.AttachmentFileName
+
+# Construct the full path for the attachment
 $attachment = Join-Path -Path $scriptDirectory -ChildPath $attachmentFileName
 
 # Prepare email subject and body with UTF-8 encoding
@@ -31,7 +41,7 @@ $body = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::UTF8.GetB
 # Check if attachment exists
 if (-not (Test-Path $attachment)) {
     Log-Message "Attachment not found at path: $attachment. Email will not be sent."
-    exit 1 # Exit the script with an error code
+    exit 1
 }
 
 # Create MailMessage object
@@ -50,7 +60,7 @@ try {
 } catch {
     Log-Message "Error adding attachment: $_"
     $message.Dispose()
-    exit 1 # Exit the script with an error code
+    exit 1
 }
 
 # Create SMTP client
@@ -72,7 +82,7 @@ try {
     Log-Message "Email sent successfully."
 } catch {
     Log-Message "Error sending email: $_"
-    exit 1 # Exit the script with an error code
+    exit 1
 }
 
 # Clean up
