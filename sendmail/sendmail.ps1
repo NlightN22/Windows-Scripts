@@ -7,17 +7,74 @@ function Log-Message {
     Write-Host "$timestamp - $Message"
 }
 
-# Executable part
-# Load configuration from JSON file
-$scriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
-$configFilePath = Join-Path -Path $scriptDirectory -ChildPath "config.json"
-
-if (-not (Test-Path $configFilePath)) {
-    Log-Message "Configuration file not found at path: $configFilePath. Script will terminate."
-    exit 1
+# Function to parse JSON manually (for PowerShell 2.0)
+function Parse-Json {
+    param (
+        [string]$JsonString
+    )
+    $result = @{}
+    $JsonString -split '\r?\n' | ForEach-Object {
+        if ($_ -match '"([^"]+)"\s*:\s*"([^"]+)"') {
+            $result[$matches[1]] = $matches[2]
+        } elseif ($_ -match '"([^"]+)"\s*:\s*(\d+)') {
+            $result[$matches[1]] = [int]$matches[2]
+        } elseif ($_ -match '"([^"]+)"\s*:\s*(true|false)') {
+            $result[$matches[1]] = [bool]$matches[2]
+        }
+    }
+    return $result
 }
 
-$config = Get-Content -Path $configFilePath | ConvertFrom-Json
+# Check PowerShell version
+$psVersion = $host.Version.Major
+if ($psVersion -lt 3) {
+    Log-Message "PowerShell version is less than 3. Using manual JSON parsing."
+    # Load configuration using manual JSON parsing
+    $scriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+    $configFilePath = Join-Path -Path $scriptDirectory -ChildPath "config.json"
+
+    if (-not (Test-Path $configFilePath)) {
+        Log-Message "Configuration file not found at path: $configFilePath. Script will terminate."
+        exit 1
+    }
+
+    $jsonContent = Get-Content -Path $configFilePath -Raw
+    $config = Parse-Json -JsonString $jsonContent
+} else {
+    Log-Message "PowerShell version is 3 or higher. Using built-in JSON parsing."
+    # Load configuration using built-in JSON parsing
+    $scriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+    $configFilePath = Join-Path -Path $scriptDirectory -ChildPath "config.json"
+
+    if (-not (Test-Path $configFilePath)) {
+        Log-Message "Configuration file not found at path: $configFilePath. Script will terminate."
+        exit 1
+    }
+
+    $config = Get-Content -Path $configFilePath | ConvertFrom-Json
+}
+
+# Check for missing parameters
+if (-not $config.SMTPServer) {
+    Log-Message "SMTPServer is missing in configuration. Script will terminate."
+    exit 1
+}
+if (-not $config.From) {
+    Log-Message "From email is missing in configuration. Script will terminate."
+    exit 1
+}
+if (-not $config.To) {
+    Log-Message "To email is missing in configuration. Script will terminate."
+    exit 1
+}
+if (-not $config.Subject) {
+    Log-Message "Subject is missing in configuration. Script will terminate."
+    exit 1
+}
+if (-not $config.Body) {
+    Log-Message "Body is missing in configuration. Script will terminate."
+    exit 1
+}
 
 # Assign parameters from the JSON file
 $smtpServer = $config.SMTPServer
