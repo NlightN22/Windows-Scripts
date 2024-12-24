@@ -1,2 +1,6 @@
 autoconnect.to.rdp
 ammy-refactoring
+*.xls
+*.xlsx
+*.doc
+*.docx
