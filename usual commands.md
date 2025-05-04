@@ -74,6 +74,9 @@ $logonEvents | ForEach-Object {
 ## benchmark
 ``` batch
 diskspd -c1G -w100 -b128K -o1 -W0 -d60 -Sh testfile.dat > pve-01.fileio.test
+winsat disk -seq -read -drive C
+winsat disk -seq -write -drive C
+winsat disk -seq -write -drive E
 ```
 # Task manager
 Start task from cli:
@@ -150,12 +153,12 @@ gpresult /scope computer /r
 ``` powershell
 winget install --id Git.Git -e --source winget
 ```
-## Allow scripts
+## Allow|Enable scripts
 ``` powershell
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 ## WinRM
-Включите Remoting на удаленной машине:
+Enable Remoting on remote machine:
 ``` powershell
 Enable-PSRemoting -Force
 ```
