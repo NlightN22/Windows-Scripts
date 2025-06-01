@@ -85,6 +85,10 @@ schtasks /Run /TN "StartExchange"
 ```
 
 # SMB
+## show list of shares
+``` batch
+net share
+```
 ## attach share to local PC
 ``` batch
 net use Z: \\servername\vm-backup /user:<USERNAME> <PASSWORD>
