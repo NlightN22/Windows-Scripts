@@ -195,5 +195,9 @@ Set-Item WSMan:\localhost\Client\TrustedHosts -Value "10.10.10.10"
 ``` powershell
 Exit-PSSession
 ```
+
+## exec script from URL
+iwr https://raw.githubusercontent.com/NlightN22/Windows-Scripts/main/docker.bp.ps1 | iex
+
 # Copy
 robocopy /R:5 /W:5 /Z /V "M:\SQL" "E:\SQL\work" taskmgr.mdf taskmgr_log.LDF
